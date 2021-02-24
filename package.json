@@ -1,7 +1,7 @@
 {
   "name": "glimesh-chat",
   "version": "1.0.0",
-  "description": "",
+  "description": "Easily connect to Glimesh chat servers!",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
