@@ -51,106 +51,108 @@ export class GlimeshChat extends EventEmitter {
     }
 
     public async connect(channel: string): Promise<ConnectionMetadata> {
-        // Find out what kind of token we'll be using for this
-        let suffix = null
-        let readOnly = false
+        return new Promise<ConnectionMetadata>((resolve, reject) => {
+            // Find out what kind of token we'll be using for this
+            let suffix = null
+            let readOnly = false
 
-        let headers: any = {
-            "Content-Type": "application/json"
-        }
-
-        if (this.auth.token) {
-            suffix = `token=${this.auth.token}`
-            headers["Authorization"] = `Bearer ${this.auth.token}`
-        } else if (this.auth.clientId) {
-            suffix = `client_id=${this.auth.clientId}`
-            headers["Authorization"] = `Client-ID ${this.auth.clientId}`
-            readOnly = true
-        }
-        this.readOnly = readOnly
-
-        if (!suffix) {
-            return {
-                connected: false,
-                readOnly
+            let headers: any = {
+                "Content-Type": "application/json"
             }
-        }
 
-        this.client = Axios.create({
-            baseURL: API_URL,
-            headers
+            if (this.auth.token) {
+                suffix = `token=${this.auth.token}`
+                headers["Authorization"] = `Bearer ${this.auth.token}`
+            } else if (this.auth.clientId) {
+                suffix = `client_id=${this.auth.clientId}`
+                headers["Authorization"] = `Client-ID ${this.auth.clientId}`
+                readOnly = true
+            }
+            this.readOnly = readOnly
+
+            if (!suffix) {
+                return resolve({
+                    connected: false,
+                    readOnly
+                })
+            }
+
+            this.client = Axios.create({
+                baseURL: API_URL,
+                headers
+            })
+
+            this.socket = new WebSocket(`wss://glimesh.tv/api/socket/websocket?vsn=2.0.0&${suffix}`)
+
+            this.socket.on("open", async () => {
+                // Got connected to the websocket server.
+                this._connected = true
+
+                // Send the initial connection packet
+                const packet = [
+                    "1",
+                    "1",
+                    "__absinthe__:control",
+                    "phx_join",
+                    {}
+                ]
+                await this.send(packet)
+
+                // Now that we're connected to the socket, and said that we want to connect we have to start the heartbeat loop before it's too late.
+                this.heartbeatTimer = setInterval(async () => await this.send([ "1", "1", "phoenix", "heartbeat", {} ]), 29 * 1000)
+                this.channelId = await this.getChannelId(channel)
+
+                // Next, connect to the chat channel.
+                const joinQuery = `subscription{ chatMessage(channelId: ${this.channelId}) { user { id, username } message } }`
+                await this.send(this.buildPacket(joinQuery))
+
+                return resolve({
+                    connected: true,
+                    readOnly: this.readOnly
+                })
+            })
+
+            this.socket.on("message", (message) => {
+                // Parse the message into something usable
+                const packet = JSON.parse(message.toString())
+                if (packet.length != 5 || packet[3] !== "subscription:data") {
+                    return
+                }
+                if (!packet[4].result.data || !packet[4].result.data.chatMessage) {
+                    return
+                }
+                const chatMessage = packet[4].result.data.chatMessage
+                if (!chatMessage.message || !chatMessage.user.username) {
+                    return
+                }
+                this.emit("message", chatMessage)
+            })
         })
-
-        this.socket = new WebSocket(`wss://glimesh.tv/api/socket/websocket?vsn=2.0.0&${suffix}`)
-
-        this.socket.on("open", async () => {
-            // Got connected to the websocket server.
-            this._connected = true
-
-            // Send the initial connection packet
-            const packet = [
-                "1",
-                "1",
-                "__absinthe__:control",
-                "phx_join",
-                {}
-            ]
-            this.send(packet)
-
-            // Now that we're connected to the socket, and said that we want to connect we have to start the heartbeat loop before it's too late.
-            this.heartbeatTimer = setInterval(async () => await this.send([ "1", "1", "phoenix", "heartbeat", {} ]), 29 * 1000)
-            this.channelId = await this.getChannelId(channel)
-
-            // Next, connect to the chat channel.
-            const joinQuery = `subscription{ chatMessage(channelId: ${this.channelId}) { user { id, username } message } }`
-            this.send(this.buildPacket(joinQuery))
-        })
-
-        this.socket.on("message", (message) => {
-            // Parse the message into something usable
-            const packet = JSON.parse(message.toString())
-            if (packet.length != 5 || packet[3] !== "subscription:data") {
-                return
-            }
-            if (!packet[4].result.data || !packet[4].result.data.chatMessage) {
-                return
-            }
-            const chatMessage = packet[4].result.data.chatMessage
-            if (!chatMessage.message || !chatMessage.user.username) {
-                return
-            }
-            this.emit("message", chatMessage)
-        })
-
-        return {
-            connected: true,
-            readOnly
-        }
     }
 
-    public sendMessage(message: string) {
+    public async sendMessage(message: string) {
         const messageQuery = `mutation {createChatMessage(channelId: ${this.channelId}, message: {message: "${message}"}) { message }}`
-        this.send(this.buildPacket(messageQuery))
+        await this.send(this.buildPacket(messageQuery))
     }
 
-    public shortTimeout(user: number) {
+    public async shortTimeout(user: number) {
         const timeoutQuery = `mutation {shortTimeoutUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
-        this.send(this.buildPacket(timeoutQuery))
+        await this.send(this.buildPacket(timeoutQuery))
     }
 
-    public longTimeout(user: number) {
+    public async longTimeout(user: number) {
         const timeoutQuery = `mutation {longTimeoutUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
-        this.send(this.buildPacket(timeoutQuery))
+        await this.send(this.buildPacket(timeoutQuery))
     }
 
-    public banUser(user: number) {
+    public async banUser(user: number) {
         const banQuery = `mutation {banUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
-        this.send(this.buildPacket(banQuery))
+        await this.send(this.buildPacket(banQuery))
     }
 
-    public unbanUser(user: number) {
+    public async unbanUser(user: number) {
         const unbanQuery = `mutation {unbanUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
-        this.send(this.buildPacket(unbanQuery))
+        await this.send(this.buildPacket(unbanQuery))
     }
 
     private buildPacket(query: string): any {
@@ -166,8 +168,15 @@ export class GlimeshChat extends EventEmitter {
         ]
     }
 
-    public send(packet: any) {
-        this.socket.send(JSON.stringify(packet))
+    public async send(packet: any): Promise<any> {
+        return new Promise<any>((resolve, reject) => {
+            this.socket.send(JSON.stringify(packet), err => {
+                if (err) {
+                    return reject(err)
+                }
+                return resolve()
+            })
+        })
     }
 
     public get connected(): boolean {

@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/cactusdev/glimesh-chat#readme",
   "devDependencies": {
-    "@types/ws": "^7.4.0",
+    "@types/ws": "^7.4.0"
   },
   "dependencies": {
     "axios": "^0.21.1",
