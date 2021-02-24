@@ -1,15 +1,28 @@
 {
   "name": "glimesh-chat",
   "version": "1.0.0",
-  "description": "Easily connect to Glimesh chat servers!",
-  "main": "index.js",
+  "description": "Easily connect to Glimesh chat services!",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepublish": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cactusdev/glimesh-chat.git"
   },
   "author": "CactusDev",
   "license": "MIT",
-  "dependencies": {
+  "bugs": {
+    "url": "https://github.com/cactusdev/glimesh-chat/issues"
+  },
+  "homepage": "https://github.com/cactusdev/glimesh-chat#readme",
+  "devDependencies": {
     "@types/ws": "^7.4.0",
+  },
+  "dependencies": {
     "axios": "^0.21.1",
     "ws": "^7.4.3"
   }
