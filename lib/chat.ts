@@ -20,9 +20,10 @@ export class GlimeshChat extends EventEmitter {
 
     private socket: WebSocket
     private _connected: boolean = false
+    private heartbeatTimer: NodeJS.Timeout
     private readOnly = false
     private token = ""
-    private heartbeatTimer: NodeJS.Timeout
+    private channelId = 0
 
     private client: any
 
@@ -97,11 +98,10 @@ export class GlimeshChat extends EventEmitter {
 
             // Now that we're connected to the socket, and said that we want to connect we have to start the heartbeat loop before it's too late.
             this.heartbeatTimer = setInterval(async () => await this.send([ "1", "1", "phoenix", "heartbeat", {} ]), 29 * 1000)
-        
-            const channelId = await this.getChannelId(channel)
+            this.channelId = await this.getChannelId(channel)
 
             // Next, connect to the chat channel.
-            const joinQuery = `subscription{ chatMessage(channelId: ${channelId}) { user { username } message } }`
+            const joinQuery = `subscription{ chatMessage(channelId: ${this.channelId}) { user { username } message } }`
             const joinPacket = [
                 "1",
                 "1",
@@ -114,18 +114,7 @@ export class GlimeshChat extends EventEmitter {
             ]
             this.send(joinPacket)
 
-            const messageQuery = `mutation {createChatMessage(channelId: ${channelId}, message: {message: "Ohai! I'm CactusBot!"}) { message }}`
-            const messagePacket = [
-                "1",
-                "1",
-                "__absinthe__:control",
-                "doc",
-                {
-                    query: messageQuery,
-                    variables: {}
-                }
-            ]
-            this.send(messagePacket)
+            await this.sendMessage("Ohai! I'm CactusBot!")
         })
 
         this.socket.on("message", (message) => {
@@ -137,6 +126,21 @@ export class GlimeshChat extends EventEmitter {
             connected: true,
             readOnly
         }
+    }
+
+    public async sendMessage(message: string) {
+        const messageQuery = `mutation {createChatMessage(channelId: ${this.channelId}, message: {message: "${message}"}) { message }}`
+        const messagePacket = [
+            "1",
+            "1",
+            "__absinthe__:control",
+            "doc",
+            {
+                query: messageQuery,
+                variables: {}
+            }
+        ]
+        this.send(messagePacket)
     }
 
     public send(packet: any) {
