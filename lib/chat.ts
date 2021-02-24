@@ -102,15 +102,24 @@ export class GlimeshChat extends EventEmitter {
             this.channelId = await this.getChannelId(channel)
 
             // Next, connect to the chat channel.
-            const joinQuery = `subscription{ chatMessage(channelId: ${this.channelId}) { user { username } message } }`
+            const joinQuery = `subscription{ chatMessage(channelId: ${this.channelId}) { user { id, username } message } }`
             this.send(this.buildPacket(joinQuery))
-
-            await this.sendMessage("Ohai! I'm CactusBot!")
         })
 
         this.socket.on("message", (message) => {
-            console.log(message);
-            this.emit("message", message.toString())
+            // Parse the message into something usable
+            const packet = JSON.parse(message.toString())
+            if (packet.length != 5 || packet[3] !== "subscription:data") {
+                return
+            }
+            if (!packet[4].result.data || !packet[4].result.data.chatMessage) {
+                return
+            }
+            const chatMessage = packet[4].result.data.chatMessage
+            if (!chatMessage.message || !chatMessage.user.username) {
+                return
+            }
+            this.emit("message", chatMessage)
         })
 
         return {
