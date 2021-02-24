@@ -119,27 +119,27 @@ export class GlimeshChat extends EventEmitter {
         }
     }
 
-    public async sendMessage(message: string) {
+    public sendMessage(message: string) {
         const messageQuery = `mutation {createChatMessage(channelId: ${this.channelId}, message: {message: "${message}"}) { message }}`
         this.send(this.buildPacket(messageQuery))
     }
 
-    public async shortTimeout(user: number) {
+    public shortTimeout(user: number) {
         const timeoutQuery = `mutation {shortTimeoutUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
         this.send(this.buildPacket(timeoutQuery))
     }
 
-    public async longTimeout(user: number) {
+    public longTimeout(user: number) {
         const timeoutQuery = `mutation {longTimeoutUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
         this.send(this.buildPacket(timeoutQuery))
     }
 
-    public async banUser(user: number) {
+    public banUser(user: number) {
         const banQuery = `mutation {banUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
         this.send(this.buildPacket(banQuery))
     }
 
-    public async unbanUser(user: number) {
+    public unbanUser(user: number) {
         const unbanQuery = `mutation {unbanUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
         this.send(this.buildPacket(unbanQuery))
     }
