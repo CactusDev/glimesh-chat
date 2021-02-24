@@ -47,6 +47,7 @@ export class GlimeshChat extends EventEmitter {
 
     public async close() {
         clearInterval(this.heartbeatTimer)
+        this.socket.close()
     }
 
     public async connect(channel: string): Promise<ConnectionMetadata> {
@@ -102,17 +103,7 @@ export class GlimeshChat extends EventEmitter {
 
             // Next, connect to the chat channel.
             const joinQuery = `subscription{ chatMessage(channelId: ${this.channelId}) { user { username } message } }`
-            const joinPacket = [
-                "1",
-                "1",
-                "__absinthe__:control",
-                "doc",
-                {
-                    query: joinQuery,
-                    variables: {}
-                }
-            ]
-            this.send(joinPacket)
+            this.send(this.buildPacket(joinQuery))
 
             await this.sendMessage("Ohai! I'm CactusBot!")
         })
@@ -130,17 +121,40 @@ export class GlimeshChat extends EventEmitter {
 
     public async sendMessage(message: string) {
         const messageQuery = `mutation {createChatMessage(channelId: ${this.channelId}, message: {message: "${message}"}) { message }}`
-        const messagePacket = [
+        this.send(this.buildPacket(messageQuery))
+    }
+
+    public async shortTimeout(user: number) {
+        const timeoutQuery = `mutation {shortTimeoutUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
+        this.send(this.buildPacket(timeoutQuery))
+    }
+
+    public async longTimeout(user: number) {
+        const timeoutQuery = `mutation {longTimeoutUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
+        this.send(this.buildPacket(timeoutQuery))
+    }
+
+    public async banUser(user: number) {
+        const banQuery = `mutation {banUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
+        this.send(this.buildPacket(banQuery))
+    }
+
+    public async unbanUser(user: number) {
+        const unbanQuery = `mutation {unbanUser(channelId: ${this.channelId}, userId: ${user}) { action, moderator { displayname } } }`
+        this.send(this.buildPacket(unbanQuery))
+    }
+
+    private buildPacket(query: string): any {
+        return [
             "1",
             "1",
             "__absinthe__:control",
             "doc",
             {
-                query: messageQuery,
+                query,
                 variables: {}
             }
         ]
-        this.send(messagePacket)
     }
 
     public send(packet: any) {
