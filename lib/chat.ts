@@ -45,6 +45,20 @@ export class GlimeshChat extends EventEmitter {
         return 0
     }
 
+    public async getUserId(username: string): Promise<number> {
+        const data = `query { channel(username: "${username}") { id } }`
+
+        try {
+            const response: any = await this.client.post("", {
+                query: data
+            })
+            return +response.data.data.user.id
+        } catch (e) {
+            console.error(e)
+        }
+        return 0
+    }
+
     public async close() {
         clearInterval(this.heartbeatTimer)
         this.socket.close()
