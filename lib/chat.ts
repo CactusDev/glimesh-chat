@@ -14,6 +14,15 @@ export interface ConnectionMetadata {
     readOnly: boolean
 }
 
+export interface Moderator {
+    canBan: boolean
+    canLongTimeout: boolean
+    canShortTimeout: boolean
+    canUnTimeout: boolean
+    canUnban: boolean
+    id: number
+}
+
 const API_URL: string = "https://glimesh.tv/api"
 
 export class GlimeshChat extends EventEmitter {
@@ -57,6 +66,27 @@ export class GlimeshChat extends EventEmitter {
             console.error(e)
         }
         return 0
+    }
+
+    public async getChannelModerators(username: string): Promise<Moderator[]> {
+        const data = `query { channel (username: "${username}") { moderators { user { id } canBan canLongTimeout canShortTimeout canUnTimeout canUnban } } }`
+
+        try {
+            const response: any = await this.client.post("", {
+                query: data
+            })
+
+            return response.data.data.channel.moderators.map((d: any) => { return {
+                canBan: d.canBan,
+                canLongTimeout: d.canLongTimeout,
+                canShortTimeout: d.canShortTimeout,
+                canUnTimeout: d.canUnTimeout,
+                id: +d.user.id
+            }})
+        } catch (e) {
+            console.error(e)
+        }
+        return []
     }
 
     public async close() {
