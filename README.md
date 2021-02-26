@@ -39,3 +39,50 @@ chat.connect("<MY CHANNEL HERE>").then(meta => {
     })
 })
 ```
+
+And that's it! This will automatically start the heartbeat loop to keep the connection alive. It is your application's responsibility to handle authentication token refreshing.
+
+You can then later disconnect with `await chat.close()`
+
+## Other things you can do
+
+For these examples, assume that you're already connected to the chat servers, like the previous examples, with the `chat` variable.
+
+#### Ban / unban user
+
+```node
+// Ban
+await chat.banUser(userId)
+
+// Unban
+await chat.unbanUser(userId)
+```
+
+#### Short / Long timeout
+
+Short timeout on Glimesh is defined as a 5 minute timeout and a long timeout is 15 minutes.
+
+```node
+await chat.shortTimeout(userId)
+await chat.longTimeout(userId)
+```
+
+#### Send custom payload
+
+Got a custom payload to send? Use this!
+
+```node
+await chat.send([ packet: "data", here: true ])
+```
+
+#### Get user id
+
+```node
+await chat.getUserId("usernameHere")
+```
+
+#### Get channel id
+
+```node
+await chat.getChannelId("usernameHere")
+```
