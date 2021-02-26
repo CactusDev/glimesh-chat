@@ -78,11 +78,20 @@ await chat.send([ packet: "data", here: true ])
 #### Get user id
 
 ```node
-await chat.getUserId("usernameHere")
+const id = await chat.getUserId("usernameHere")
 ```
 
 #### Get channel id
 
 ```node
-await chat.getChannelId("usernameHere")
+const id = await chat.getChannelId("usernameHere")
+```
+
+#### Get moderators in the channel
+
+```node
+const mods = await chat.getModerators("usernameHere")
+mods.forEach(mod => {
+    console.log(`user: ${mod.id} can ban ${mod.canBan} can long timeout ${mod.canLongTimeout} can short timeout ${mod.canShortTimeout} can untimeout ${mod.canUnTimeout}`)
+})
 ```
