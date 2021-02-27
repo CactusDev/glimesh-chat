@@ -95,7 +95,7 @@ export class GlimeshChat extends EventEmitter {
     }
 
     public async connect(channel: string): Promise<ConnectionMetadata> {
-        return new Promise<ConnectionMetadata>((resolve, reject) => {
+        return new Promise<ConnectionMetadata>(async (resolve, reject) => {
             // Find out what kind of token we'll be using for this
             let suffix = null
             let readOnly = false
@@ -125,7 +125,7 @@ export class GlimeshChat extends EventEmitter {
                 baseURL: API_URL,
                 headers
             })
-
+            this.channelId = await this.getChannelId(channel)
             this.socket = new WebSocket(`wss://glimesh.tv/api/socket/websocket?vsn=2.0.0&${suffix}`)
 
             this.socket.on("open", async () => {
@@ -144,7 +144,6 @@ export class GlimeshChat extends EventEmitter {
 
                 // Now that we're connected to the socket, and said that we want to connect we have to start the heartbeat loop before it's too late.
                 this.heartbeatTimer = setInterval(async () => await this.send([ "1", "1", "phoenix", "heartbeat", {} ]), 29 * 1000)
-                this.channelId = await this.getChannelId(channel)
 
                 // Next, connect to the chat channel.
                 const joinQuery = `subscription{ chatMessage(channelId: ${this.channelId}) { user { id, username } message } }`
